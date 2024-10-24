@@ -1,28 +1,67 @@
 import { useState } from 'react'
 import { Navbar } from '../components/Navbar'
 import { toast } from "react-toastify";
-import isEmail from 'validator/lib/isEmail';
+import validator from 'validator';
+import axios from 'axios';
+import { Navigate } from 'react-router-dom';
 
 export const Register = () => {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [mobno, setMobno] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [register, setRegister] = useState(false);
+  const [redirect, setRedirect] = useState(false);
 
   function validateDetails() {
     if (!name) {
       toast.error("Name cannot be empty.");
+      return false
     }
-    else if (!isEmail(email)) {
+    else if (!validator.isEmail(email)) {
       toast.error("Please enter valid email address.");
+      return false
+    }
+    else if (!validator.isNumeric(mobno)) {
+      toast.error("Invalid mobile number.")
+      return false
+    }
+    else if (mobno.length != 10) {
+      toast.error("Mobile number should be 10-digits only(Indian mobile numbers).")
+      return false
     }
     else if (password.length < 8) {
       toast.warning("Password should be atleast 8 characters long.")
+      return false
     }
     else if (password != confirmPassword) {
       toast.error("Password does not match.")
+      return false
     }
+    return true;
+  }
+
+  function registerUser() {
+    if (validateDetails()) {
+      console.log("All good!!");
+
+      axios.post("/register", { name: name, email: email, mobno: mobno, password: password, })
+        .then(res => {
+          if (res.data === "email found") {
+            toast.error("Email already exists. Please login!")
+            return;
+          } else {
+            setRegister(true);
+          }
+        })
+        .catch(err => { console.log(err) });
+    }
+  }
+
+  if (redirect) {
+    return <Navigate to={"/login"} />
   }
 
   return (
@@ -40,15 +79,32 @@ export const Register = () => {
 
             <input type="email" placeholder='Enter e-mail address' className='w-full mb-6 px-4 py-2 rounded-lg bg-gray-100 border border-slate-300' onChange={(e) => setEmail(e.target.value)} />
 
+            <input type="text" placeholder='Enter mobile number' className='w-full mb-6 px-4 py-2 rounded-lg bg-gray-100 border border-slate-300' onChange={(e) => setMobno(e.target.value)} />
+
             <input type="password" placeholder='Enter password' className='w-full mb-6 px-4 py-2 rounded-lg bg-gray-100 border border-slate-300' onChange={(e) => setPassword(e.target.value)} />
 
             <input type="password" placeholder='Confirm password' className='w-full mb-6 px-4 py-2 rounded-lg bg-gray-100 border border-slate-300' onChange={(e) => setConfirmPassword(e.target.value)} />
 
-            <button className='w-full mb-6 px-4 py-2 rounded-lg bg-teal-500 text-white' onClick={() => validateDetails()}>Register</button>
-
+            <button className='w-full mb-6 px-4 py-2 rounded-lg bg-teal-500 text-white' onClick={() => registerUser()}>Register</button>
           </div>
         </div>
       </div>
+
+      {register && (
+        <div className='w-full h-screen fixed top-0 left-0'>
+          <div className='w-full h-full flex bg-black justify-center items-center bg-opacity-50'>
+            <div className='bg-white h-1/2 w-1/2 rounded-xl text-center px-16 pb-16 pt-32'>
+              <div className='mb-8'>
+                <p className='text-xl'>Registration Done Successfully. Please <b>Login</b> to continue</p>
+              </div>
+              <div className=''>
+                <button className="bg-yellow-500 text-white px-4 py-2 rounded-lg" onClick={() => setRedirect(true)}>Go to Login</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
